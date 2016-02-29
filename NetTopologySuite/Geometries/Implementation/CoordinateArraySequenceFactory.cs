@@ -1,3 +1,5 @@
+using NetTopologySuite.Utilities;
+
 namespace NetTopologySuite.Geometries.Implementation
 {
     using System;
@@ -40,19 +42,19 @@ namespace NetTopologySuite.Geometries.Implementation
         
         public ICoordinateSequence Create(int size, int dimension)
         {
-            if (dimension > 3)
-                dimension = 3;
-            // throw new ArgumentOutOfRangeException("dimension must <= 3");
-            // handle bogus dimension
-            if (dimension < 2)
-                // TODO: change to dimension = 2  ???
-                return new CoordinateArraySequence(size);
-            return new CoordinateArraySequence(size, dimension);
+            switch (dimension)
+            {
+                case 2: return Create(size, Ordinates.XY);
+                case 3: return Create(size, Ordinates.XYZ);
+                case 4: return Create(size, Ordinates.XYZM);
+                default:
+                throw new ArgumentOutOfRangeException("dimension", "Valid values are 2, 3 or 4 dimensions");
+            }
         }
 
         public ICoordinateSequence Create(int size, Ordinates ordinates)
         {
-            return new CoordinateArraySequence(size, OrdinatesUtility.OrdinatesToDimension(ordinates));
+            return new CoordinateArraySequence(size, ordinates);
         }
 
         public Ordinates Ordinates

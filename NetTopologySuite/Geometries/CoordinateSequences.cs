@@ -126,7 +126,7 @@ namespace NetTopologySuite.Geometries
 
         private static ICoordinateSequence CreateClosedRing(ICoordinateSequenceFactory fact, ICoordinateSequence seq, int size)
         {
-            var newseq = fact.Create(size, seq.Dimension);
+            var newseq = fact.Create(size, seq.Ordinates);
             int n = seq.Count;
             Copy(seq, 0, newseq, 0, n);
             // fill remaining coordinates with start point
