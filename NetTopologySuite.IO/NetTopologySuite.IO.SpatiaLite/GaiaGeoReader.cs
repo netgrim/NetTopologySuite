@@ -217,16 +217,14 @@ namespace NetTopologySuite.IO
 
         private static GaiaImport SetGaiaGeoParseFunctions(GaiaGeoEndianMarker gaiaGeoEndianMarker, Ordinates handleOrdinates)
         {
-            var conversionNeeded = false;
+            bool conversionNeeded;
             switch (gaiaGeoEndianMarker)
             {
                 case GaiaGeoEndianMarker.GAIA_LITTLE_ENDIAN:
-                    if (!BitConverter.IsLittleEndian)
-                        conversionNeeded = true;
+                    conversionNeeded = !BitConverter.IsLittleEndian;
                     break;
                 case GaiaGeoEndianMarker.GAIA_BIG_ENDIAN:
-                    if (BitConverter.IsLittleEndian)
-                        conversionNeeded = true;
+                    conversionNeeded = BitConverter.IsLittleEndian;
                     break;
                 default:
                     /* unknown encoding; nor litte-endian neither big-endian */
