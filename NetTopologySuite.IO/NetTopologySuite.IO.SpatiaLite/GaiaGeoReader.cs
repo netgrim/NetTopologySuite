@@ -120,11 +120,13 @@ namespace NetTopologySuite.IO
             //        geo->DimensionModel = GAIA_XY;
             //        break;
             //};
-            offset = 6;
-            var env = new Envelope(gaiaImport.GetDouble(blob, ref offset),
-                                   gaiaImport.GetDouble(blob, ref offset),
-                                   gaiaImport.GetDouble(blob, ref offset),
-                                   gaiaImport.GetDouble(blob, ref offset));
+            
+			//env was unused
+			//offset = 6;
+			//var env = new Envelope(gaiaImport.GetDouble(blob, ref offset),
+			//                       gaiaImport.GetDouble(blob, ref offset),
+			//                       gaiaImport.GetDouble(blob, ref offset),
+			//                       gaiaImport.GetDouble(blob, ref offset));
 
             offset = index + 39;
             var type = (GaiaGeoGeometry)gaiaImport.GetInt32(blob, ref offset);
