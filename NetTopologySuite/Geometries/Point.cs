@@ -387,13 +387,14 @@ namespace NetTopologySuite.Geometries
         {
             get
             {
-                if (Coordinate == null)
+                var coordinate = Coordinate;
+                if (coordinate == null)
                     throw new ArgumentOutOfRangeException("M called on empty Point");
-                return Coordinate.NullOrdinate;
+                return coordinate.M;
             }
             set
             {
-                //Coordinate.M = value;
+                Coordinate.M = value;
             }
         }
     
