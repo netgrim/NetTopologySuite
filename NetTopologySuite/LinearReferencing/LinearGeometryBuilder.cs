@@ -132,5 +132,34 @@ namespace NetTopologySuite.LinearReferencing
             return _geomFact.BuildGeometry(_lines);
         }
 
+        public static IGeometry DefineMeasures(IGeometry geometry, double startMeasure, double endMeasure)
+        {
+            var length = geometry.Length;
+            var runningLength = 0d;
+            var measureRange = endMeasure - startMeasure;
+
+            var builder = new LinearGeometryBuilder(geometry.Factory);
+
+            for (var it = new LinearIterator(geometry); it.HasNext(); it.Next())
+                if (it.IsEndOfLine)
+                    builder.EndLine();
+                else
+                {
+                    if (it.VertexIndex == 0)
+                        builder.Add(it.SegmentStart.WithMeasure(runningLength / length * measureRange + startMeasure));
+
+                    runningLength += it.SegmentStart.Distance(it.SegmentEnd);
+                    var measure = runningLength / length * measureRange + startMeasure;
+
+                    builder.Add(it.SegmentEnd.WithMeasure(measure));
+                }
+
+            return builder.GetGeometry();
+        }
+
+        public static IGeometry RemoveMeasures(IGeometry geometry)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
