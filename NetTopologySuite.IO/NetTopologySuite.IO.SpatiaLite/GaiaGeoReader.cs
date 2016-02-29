@@ -47,24 +47,27 @@ namespace NetTopologySuite.IO
             _handleOrdinates = handleOrdinates;
         }
 
-        public IGeometry Read(byte[] blob)
+		public IGeometry Read(byte[] blob)
+		{
+			return Read(blob, 0, blob.Length);
+		}
+
+        public IGeometry Read(byte[] blob, int index, int count)
         {
-            if (blob.Length < 45)
+            if (count < 45)
                 return null;		/* cannot be an internal BLOB WKB geometry */
-            if ((GaiaGeoBlobMark)blob[0] != GaiaGeoBlobMark.GAIA_MARK_START)
+            if ((GaiaGeoBlobMark)blob[index] != GaiaGeoBlobMark.GAIA_MARK_START)
                 return null;		/* failed to recognize START signature */
-            var size = blob.Length;
-            if ((GaiaGeoBlobMark)blob[size - 1] != GaiaGeoBlobMark.GAIA_MARK_END)
+            if ((GaiaGeoBlobMark)blob[index + count - 1] != GaiaGeoBlobMark.GAIA_MARK_END)
                 return null;		/* failed to recognize END signature */
-            if ((GaiaGeoBlobMark)blob[38] != GaiaGeoBlobMark.GAIA_MARK_MBR)
+            if ((GaiaGeoBlobMark)blob[index + 38] != GaiaGeoBlobMark.GAIA_MARK_MBR)
                 return null;		/* failed to recognize MBR signature */
 
-            var gaiaImport = SetGaiaGeoParseFunctions((GaiaGeoEndianMarker)blob[1], HandleOrdinates);
-            if (gaiaImport == null)
-                return null;
+			var offset = index + 1;
+			var gaiaImport = SetGaiaGeoParseFunctions((GaiaGeoEndianMarker)blob[offset++], HandleOrdinates);
 
             //geo = gaiaAllocGeomColl();
-            var offset = 2;
+            
             var srid = gaiaImport.GetInt32(blob, ref offset);
 
             if (_factory == null || _factory.SRID != srid)
@@ -123,7 +126,7 @@ namespace NetTopologySuite.IO
                                    gaiaImport.GetDouble(blob, ref offset),
                                    gaiaImport.GetDouble(blob, ref offset));
 
-            offset = 39;
+            offset = index + 39;
             var type = (GaiaGeoGeometry)gaiaImport.GetInt32(blob, ref offset);
             var geom = ParseWkbGeometry(type, blob, ref offset, factory, gaiaImport);
             if (geom != null)
