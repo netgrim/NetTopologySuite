@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using GeoAPI.Geometries;
+using System.ComponentModel;
 
 namespace NetTopologySuite.Geometries.Implementation
 {
@@ -21,38 +22,39 @@ namespace NetTopologySuite.Geometries.Implementation
 #endif
     public class CoordinateArraySequence : ICoordinateSequence
     {    
-        protected Coordinate[] Coordinates;
-
-        /**
-         * The actual dimension of the coordinates in the sequence.
-         * Allowable values are 2 or 3.
-         */
-        private readonly int _dimension = 3;
+        private double[,] _coordinates;
   
         /// <summary>
         /// Constructs a sequence based on the given array of <see cref="Coordinate"/>s.
-        /// The coordinate dimension is 3
         /// </summary>
         /// <remarks>
-        /// The array is not copied.
+        /// The array is copied.
         /// </remarks>
         /// <param name="coordinates">The coordinate array that will be referenced.</param>
         public CoordinateArraySequence(Coordinate[] coordinates) 
-            : this(coordinates, 3) { }
-
-        /// <summary>
-        /// Constructs a sequence based on the given array 
-        /// of <see cref="Coordinate"/>s.
-        /// </summary>
-        /// <remarks>The Array is not copied</remarks>
-        /// <param name="coordinates">The coordinate array that will be referenced.</param>
-        /// <param name="dimension">The dimension of the coordinates</param>
-        public CoordinateArraySequence(Coordinate[] coordinates, int dimension)
         {
-            Coordinates = coordinates;
-            _dimension = dimension;
-            if (coordinates == null)
-                Coordinates = new Coordinate[0];
+            if (coordinates == null || coordinates.Length == 0)
+                _coordinates = new double[0,0];
+            else
+            {
+                var length = coordinates.Length;
+                _ordinate = ToSupportedOrdinates(coordinates[0].Ordinates);
+
+                var dimension = Dimension;
+                _coordinates = new double[length, dimension];
+                var ordinates = new double[dimension];
+
+                for (int i = 0; i < length; i++)
+                {
+                    var coordinate = coordinates[i];
+                    if(coordinate.Ordinates != Ordinates)
+                        throw new TopologyException ("All coordinates must have the same ordinates", coordinate);
+
+                    coordinates[i].GetOrdinates(ordinates);
+                    for (int j = 0; j < dimension; j++)
+                        _coordinates[i, j] = ordinates[j];
+                }
+            }
         }
         
         /// <summary>
@@ -60,20 +62,20 @@ namespace NetTopologySuite.Geometries.Implementation
         /// </summary>
         /// <param name="size">The size of the sequence to create.</param>
         public CoordinateArraySequence(int size)
-            : this(size, 3) { }
+            : this(size, Ordinates.XY)
+        {
+        }
 
         /// <summary>
         /// Constructs a sequence of a given <paramref name="size"/>, populated 
         /// with new <see cref="Coordinate"/>s of the given <paramref name="dimension"/>.
         /// </summary>
         /// <param name="size">The size of the sequence to create.</param>
-        /// <param name="dimension">the dimension of the coordinates</param>
-        public CoordinateArraySequence(int size, int dimension)
+		/// <param name="ordinates">the ordinates of the coordinates</param>
+        public CoordinateArraySequence(int size, Ordinates ordinates)
         {
-            Coordinates = new Coordinate[size];
-            _dimension = dimension;
-            for (var i = 0; i < size; i++)
-                Coordinates[i] = new Coordinate();
+            _ordinate = ToSupportedOrdinates(ordinates);
+            _coordinates = new double[size, Dimension];
         }
 
 
@@ -85,15 +87,34 @@ namespace NetTopologySuite.Geometries.Implementation
         {
             if (coordSeq == null)
             {
-                Coordinates = new Coordinate[0];
+                _ordinate = SupportedOrdinate.XY;
+                _coordinates = new double[0,0];
                 return;
             }
 
-            _dimension = coordSeq.Dimension;
-            Coordinates = new Coordinate[coordSeq.Count];
+            var coordinateArraySeq = coordSeq as CoordinateArraySequence;
+            if(coordinateArraySeq != null)
+            {
+                _ordinate = coordinateArraySeq._ordinate;
+                _coordinates = (double[,])coordinateArraySeq._coordinates.Clone();
+            }
+            
+            _ordinate = ToSupportedOrdinates(coordSeq.Ordinates);
+            var dimension = Dimension;
 
-            for (var i = 0; i < Coordinates.Length; i++) 
-                Coordinates[i] = coordSeq.GetCoordinateCopy(i);
+            _coordinates = new double[coordSeq.Count, dimension];
+            var ordinates = new double[dimension];
+            var coordinate = new Coordinate(coordSeq.Ordinates);
+
+            var length = coordSeq.Count;
+            for (var i = 0; i < length; i++)
+            {
+                coordSeq.GetCoordinate(i, coordinate);
+                coordinate.GetOrdinates(ordinates);
+
+                for (int j = 0; j < dimension; j++)
+                    _coordinates[i,j] = ordinates[j];
+            }
         }
 
         /// <summary>
@@ -104,17 +125,55 @@ namespace NetTopologySuite.Geometries.Implementation
         {
             get
             {
-                return _dimension;
+                switch (_ordinate)
+                {
+                    case SupportedOrdinate.XY:
+                        return 2;
+                    case SupportedOrdinate.XYM:
+                    case SupportedOrdinate.XYZ:
+                        return 3;
+                    case SupportedOrdinate.XYZM:
+                        return 4;
+                    default:
+                            throw new InvalidEnumArgumentException("Ordinates must represent 2,3 or 4 dimensions");
+                    }
             }
         }
+
+        private enum SupportedOrdinate
+        {
+            XY,
+            XYM,
+            XYZ,
+            XYZM
+        }
+
+        private readonly SupportedOrdinate _ordinate;
 
         public Ordinates Ordinates
         {
             get
             {
-                return _dimension == 3 
-                    ? Ordinates.XYZ 
-                    : Ordinates.XY;
+                switch (_ordinate)
+                {
+                    case SupportedOrdinate.XY: return GeoAPI.Geometries.Ordinates.XY;
+                    case SupportedOrdinate.XYM: return GeoAPI.Geometries.Ordinates.XYM;
+                    case SupportedOrdinate.XYZ: return GeoAPI.Geometries.Ordinates.XYZ;
+                    case SupportedOrdinate.XYZM: return GeoAPI.Geometries.Ordinates.XYZM;
+                    default: throw new InvalidEnumArgumentException();
+                }
+            }
+        }
+
+        private SupportedOrdinate ToSupportedOrdinates(Ordinates ordinates)
+        {
+            switch (ordinates)
+            {
+                case GeoAPI.Geometries.Ordinates.XY: return SupportedOrdinate.XY;
+                case GeoAPI.Geometries.Ordinates.XYM: return SupportedOrdinate.XYM;
+                case GeoAPI.Geometries.Ordinates.XYZ: return SupportedOrdinate.XYZ;
+                case GeoAPI.Geometries.Ordinates.XYZM: return SupportedOrdinate.XYZM;
+                default: throw new InvalidEnumArgumentException();
             }
         }
 
@@ -123,11 +182,22 @@ namespace NetTopologySuite.Geometries.Implementation
         /// </summary>
         /// <param name="i">The index of the coordinate.</param>
         /// <returns>The requested Coordinate instance.</returns>
-        public Coordinate GetCoordinate(int i) 
+        public Coordinate GetCoordinate(int i)
         {
-            return Coordinates[i];
+            switch (_ordinate)
+            {
+                case SupportedOrdinate.XY:
+                    return new Coordinate(_coordinates[i, 0], _coordinates[i, 1]);
+                case SupportedOrdinate.XYM:
+                    return Coordinate.FromXYM(_coordinates[i, 0], _coordinates[i, 1], _coordinates[i, 2]);
+                case SupportedOrdinate.XYZ:
+                    return new Coordinate(_coordinates[i, 0], _coordinates[i, 1], _coordinates[i, 2]);
+                case SupportedOrdinate.XYZM:
+                    return new Coordinate(_coordinates[i, 0], _coordinates[i, 1], _coordinates[i, 2], _coordinates[i, 3]);
+                default:
+                    throw new InvalidEnumArgumentException("Ordinates must represent 2,3 or 4 dimensions");
+            }
         }
-
         /// <summary>
         /// Get a copy of the Coordinate with index i.
         /// </summary>
@@ -135,7 +205,7 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <returns>A copy of the requested Coordinate.</returns>
         public virtual Coordinate GetCoordinateCopy(int i) 
         {
-            return new Coordinate(Coordinates[i]);
+            return GetCoordinate(i);
         }
 
         /// <summary>
@@ -143,11 +213,30 @@ namespace NetTopologySuite.Geometries.Implementation
         /// </summary>
         /// <param name="index">The index of the coordinate to copy.</param>
         /// <param name="coord">A Coordinate to receive the value.</param>
-        public void GetCoordinate(int index, Coordinate coord) 
+        public void GetCoordinate(int index, Coordinate coord)
         {
-            coord.X = Coordinates[index].X;
-            coord.Y = Coordinates[index].Y;
-            coord.Z = Coordinates[index].Z;
+            if (coord.Ordinates != Ordinates)
+                throw new ArgumentException("Ordinates must be the same");
+
+            coord.X = _coordinates[index, 0];
+            coord.Y = _coordinates[index, 1];
+
+            switch (_ordinate)
+            {
+                case SupportedOrdinate.XYM:
+                    coord.M = _coordinates[index, 2];
+                    return;
+                case SupportedOrdinate.XYZ:
+                    coord.Z = _coordinates[index, 2];
+                    return;
+                case SupportedOrdinate.XYZM:
+                    coord.M = _coordinates[index, 3];
+                    goto case SupportedOrdinate.XYZ;
+                case SupportedOrdinate.XY:
+                    return;
+                default:
+                    throw new InvalidEnumArgumentException("Ordinates must represent 2,3 or 4 dimensions");
+            }
         }
 
         /// <summary>
@@ -159,7 +248,7 @@ namespace NetTopologySuite.Geometries.Implementation
         /// </returns>
         public double GetX(int index) 
         {
-            return Coordinates[index].X;
+            return _coordinates[index, 0];
         }
 
         /// <summary>
@@ -171,7 +260,7 @@ namespace NetTopologySuite.Geometries.Implementation
         /// </returns>
         public double GetY(int index) 
         {
-            return Coordinates[index].Y;
+            return _coordinates[index, 1];
         }
 
         /// <summary>
@@ -185,17 +274,24 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <returns></returns>
         public double GetOrdinate(int index, Ordinate ordinate)
         {
-            switch (ordinate) 
+            switch (ordinate)
             {
-                case Ordinate.X:  
-                    return Coordinates[index].X;
-                case Ordinate.Y:  
-                    return Coordinates[index].Y;
-                case Ordinate.Z:  
-                    return Coordinates[index].Z;
-                default:
-                    return Double.NaN;
-            }            
+                case Ordinate.X:
+                    return _coordinates[index, 0];
+                case Ordinate.Y:
+                    return _coordinates[index, 1];
+                case Ordinate.Z:
+                    if ((Ordinates & Ordinates.Z) == Ordinates.Z)
+                        return _coordinates[index, 2];
+                break;
+            case Ordinate.M:
+                if (Ordinates == Ordinates.XYM)
+                    return _coordinates[index, 2];
+                else if (Ordinates == Ordinates.XYZM)
+                    return _coordinates[index, 3];
+                break;
+            }
+            throw new InvalidEnumArgumentException("Ordinates does not contains " + ordinate);
         }
 
         /// <summary>
@@ -204,20 +300,7 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <returns>The deep copy.</returns>
         public virtual object Clone()
         {
-            Coordinate[] cloneCoordinates = GetClonedCoordinates();
-            return new CoordinateArraySequence(cloneCoordinates, Dimension);
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        protected Coordinate[] GetClonedCoordinates() 
-        {
-            Coordinate[] cloneCoordinates = new Coordinate[Count];
-            for (int i = 0; i < Coordinates.Length; i++) 
-                cloneCoordinates[i] = (Coordinate) Coordinates[i].Clone();
-            return cloneCoordinates;
+            return new CoordinateArraySequence(this);
         }
 
         /// <summary>
@@ -227,7 +310,7 @@ namespace NetTopologySuite.Geometries.Implementation
         {
             get
             {
-                return Coordinates.Length;
+                return _coordinates.GetLength(0);
             }
         }
 
@@ -239,29 +322,40 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <param name="value">The new ordinate value.</param>
         public void SetOrdinate(int index, Ordinate ordinate, double value)
         {
-            switch (ordinate) 
+            switch (ordinate)
             {
-                case Ordinate.X:  
-                    Coordinates[index].X = value;
-                    break;
-                case Ordinate.Y: 
-                    Coordinates[index].Y = value;
-                    break;
-                case Ordinate.Z: 
-                    Coordinates[index].Z = value;
-                    break;
-                //default:
-                //    //throw new ArgumentException("invalid ordinate index: " + ordinate);
+                case Ordinate.X:
+                    _coordinates[index, 0] = value;
+                    return;
+                case Ordinate.Y:
+                    _coordinates[index, 1] = value;
+                    return;
+                case Ordinate.Z:
+                    if ((Ordinates & Ordinates.Z) == Ordinates.Z)
+                        _coordinates[index, 2] = value;
+                    return;
+                case Ordinate.M:
+                    if (Ordinates == Ordinates.XYM)
+                        _coordinates[index, 2] = value;
+                    else if (Ordinates == Ordinates.XYZM)
+                        _coordinates[index, 3] = value;
+                    return;
             }
+            throw new InvalidEnumArgumentException("Ordinates does not contains " + ordinate);
+
         }
 
         /// <summary>
-        ///This method exposes the internal Array of Coordinate Objects.       
+        /// Returns an array of Coordinate Objects.       
         /// </summary>
         /// <returns></returns>
         public Coordinate[] ToCoordinateArray() 
         {
-            return Coordinates;
+            var count = Count;
+            var coordinates = new Coordinate[count];
+            for (int i = 0; i < count; i++)
+                coordinates[i] = GetCoordinate(i);
+            return coordinates;
         }
 
         /// <summary>
@@ -272,8 +366,9 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <returns>A reference to the expanded envelope.</returns>
         public Envelope ExpandEnvelope(Envelope env)
         {
-            for (int i = 0; i < Coordinates.Length; i++ ) 
-                env.ExpandToInclude(Coordinates[i]);            
+            var count = Count;
+            for (int i = 0; i < count; i++ ) 
+                env.ExpandToInclude(GetCoordinate(i));            
             return env;
         }
 
@@ -282,7 +377,7 @@ namespace NetTopologySuite.Geometries.Implementation
             var coordinates = new Coordinate[Count];
             for (var i = 0; i < Count; i++ )
             {
-                coordinates[Count - i - 1] = new Coordinate(Coordinates[i]);
+                coordinates[Count - i - 1] = new Coordinate(GetCoordinate(i));
             }
             return new CoordinateArraySequence(coordinates);
         }
@@ -293,15 +388,15 @@ namespace NetTopologySuite.Geometries.Implementation
         /// <returns></returns>
         public override string ToString() 
         {
-            if (Coordinates.Length > 0) 
+            if (Count> 0) 
             {
-                StringBuilder strBuf = new StringBuilder(17 * Coordinates.Length);
+                StringBuilder strBuf = new StringBuilder(17 * Count);
                 strBuf.Append('(');
-                strBuf.Append(Coordinates[0]);
-                for (int i = 1; i < Coordinates.Length; i++) 
+                strBuf.Append(GetCoordinate(0));
+                for (int i = 1; i < Count; i++) 
                 {
                     strBuf.Append(", ");
-                    strBuf.Append(Coordinates[i]);
+                    strBuf.Append(GetCoordinate(i));
                 }
                 strBuf.Append(')');
                 return strBuf.ToString();
