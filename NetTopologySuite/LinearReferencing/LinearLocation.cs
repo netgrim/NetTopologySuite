@@ -59,11 +59,8 @@ namespace NetTopologySuite.LinearReferencing
             if (fraction <= 0.0) return p0;
             if (fraction >= 1.0) return p1;
 
-            double x = (p1.X - p0.X) * fraction + p0.X;
-            double y = (p1.Y - p0.Y) * fraction + p0.Y;
-            // interpolate Z value. If either input Z is NaN, result z will be NaN as well.
-            double z = (p1.Z - p0.Z) * fraction + p0.Z;
-            return new Coordinate(x, y, z);
+            //use operator to validate same ordinate
+            return (p1 - p0) * fraction + p0;
         }
 
         private int _componentIndex;

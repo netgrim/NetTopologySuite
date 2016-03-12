@@ -302,10 +302,8 @@ namespace NetTopologySuite.Geometries
         /// <returns> the point at that distance</returns>
         public Coordinate PointAlong(double segmentLengthFraction)
         {
-            var coord = new Coordinate();
-            coord.X = _p0.X + segmentLengthFraction * (_p1.X - _p0.X);
-            coord.Y = _p0.Y + segmentLengthFraction * (_p1.Y - _p0.Y);
-            return coord;
+            //use operator to support m ordinate
+            return (_p1 - _p0) * segmentLengthFraction + _p0;
         }
 
         /// <summary>
@@ -326,31 +324,23 @@ namespace NetTopologySuite.Geometries
         /// <exception cref="ApplicationException"> if the segment has zero length</exception>
         public Coordinate PointAlongOffset(double segmentLengthFraction, double offsetDistance)
         {
-            // the point on the segment line
-            double segx = _p0.X + segmentLengthFraction * (_p1.X - _p0.X);
-            double segy = _p0.Y + segmentLengthFraction * (_p1.Y - _p0.Y);
+            var d = _p1 - _p0;
 
-            double dx = _p1.X - _p0.X;
-            double dy = _p1.Y - _p0.Y;
-            double len = Math.Sqrt(dx * dx + dy * dy);
-            double ux = 0.0;
-            double uy = 0.0;
+            // the point on the segment line
+            var p = d * segmentLengthFraction + _p0;
+
             if (offsetDistance != 0.0)
             {
+                double len = Math.Sqrt(d.X * d.X + d.Y*d.Y);
                 if (len <= 0.0)
                     throw new ApplicationException("Cannot compute offset from zero-length line segment");
 
                 // u is the vector that is the length of the offset, in the direction of the segment
-                ux = offsetDistance * dx / len;
-                uy = offsetDistance * dy / len;
+                p.X -= offsetDistance * d.Y / len;
+                p.Y += offsetDistance * d.X / len;
             }
 
-            // the offset point is the seg point plus the offset vector rotated 90 degrees CCW
-            double offsetx = segx - uy;
-            double offsety = segy + ux;
-
-            var coord = new Coordinate(offsetx, offsety);
-            return coord;
+            return p;
         }
 
         /// <summary>Computes the Projection Factor for the projection of the point p
