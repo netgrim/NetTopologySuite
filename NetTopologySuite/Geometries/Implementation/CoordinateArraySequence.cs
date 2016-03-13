@@ -156,10 +156,10 @@ namespace NetTopologySuite.Geometries.Implementation
             {
                 switch (_ordinate)
                 {
-                    case SupportedOrdinate.XY: return GeoAPI.Geometries.Ordinates.XY;
-                    case SupportedOrdinate.XYM: return GeoAPI.Geometries.Ordinates.XYM;
-                    case SupportedOrdinate.XYZ: return GeoAPI.Geometries.Ordinates.XYZ;
-                    case SupportedOrdinate.XYZM: return GeoAPI.Geometries.Ordinates.XYZM;
+                    case SupportedOrdinate.XY: return Ordinates.XY;
+                    case SupportedOrdinate.XYM: return Ordinates.XYM;
+                    case SupportedOrdinate.XYZ: return Ordinates.XYZ;
+                    case SupportedOrdinate.XYZM: return Ordinates.XYZM;
                     default: throw new InvalidEnumArgumentException();
                 }
             }
@@ -169,10 +169,10 @@ namespace NetTopologySuite.Geometries.Implementation
         {
             switch (ordinates)
             {
-                case GeoAPI.Geometries.Ordinates.XY: return SupportedOrdinate.XY;
-                case GeoAPI.Geometries.Ordinates.XYM: return SupportedOrdinate.XYM;
-                case GeoAPI.Geometries.Ordinates.XYZ: return SupportedOrdinate.XYZ;
-                case GeoAPI.Geometries.Ordinates.XYZM: return SupportedOrdinate.XYZM;
+                case Ordinates.XY: return SupportedOrdinate.XY;
+                case Ordinates.XYM: return SupportedOrdinate.XYM;
+                case Ordinates.XYZ: return SupportedOrdinate.XYZ;
+                case Ordinates.XYZM: return SupportedOrdinate.XYZM;
                 default: throw new InvalidEnumArgumentException();
             }
         }
