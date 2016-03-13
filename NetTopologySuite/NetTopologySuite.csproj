@@ -157,6 +157,9 @@
     <Compile Include="Index\Strtree\Interval.cs" />
     <Compile Include="IO\KML\KMLWriter.cs" />
     <Compile Include="IO\WKBHexFileReader.cs" />
+    <Compile Include="LinearReferencing\InvalidLrsGeometry.cs" />
+    <Compile Include="LinearReferencing\InvalidMeasureException.cs" />
+    <Compile Include="LinearReferencing\MeasureLocationMap.cs" />
     <Compile Include="Mathematics\Plane3D.cs" />
     <Compile Include="Mathematics\Vector3D.cs" />
     <Compile Include="Noding\InteriorIntersectionFinderAdder.cs" />
