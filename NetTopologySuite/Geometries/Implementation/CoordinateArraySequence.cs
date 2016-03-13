@@ -38,7 +38,8 @@ namespace NetTopologySuite.Geometries.Implementation
             else
             {
                 var length = coordinates.Length;
-                _ordinate = ToSupportedOrdinates(coordinates[0].Ordinates);
+                var ordinate = coordinates[0].Ordinates;
+                _ordinate = ToSupportedOrdinates(ordinate);
 
                 var dimension = Dimension;
                 _coordinates = new double[length, dimension];
@@ -47,7 +48,7 @@ namespace NetTopologySuite.Geometries.Implementation
                 for (int i = 0; i < length; i++)
                 {
                     var coordinate = coordinates[i];
-                    if(coordinate.Ordinates != Ordinates)
+                    if(coordinate.Ordinates != ordinate)
                         throw new TopologyException ("All coordinates must have the same ordinates", coordinate);
 
                     coordinates[i].GetOrdinates(ordinates);
